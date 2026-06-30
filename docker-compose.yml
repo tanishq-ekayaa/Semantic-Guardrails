@@ -1,0 +1,48 @@
+services:
+
+  qdrant:
+    image: qdrant/qdrant:v1.9.2
+    restart: always
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  input_guard:
+    build: .
+    restart: always
+    ports:
+      - "8001:8001"
+    environment:
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - USE_IN_MEMORY_QDRANT=false
+      - INPUT_SEEDS_PATH=/app/data/input_vector_seeds.json
+    command: >
+      sh -c "sleep 15 &&
+      uvicorn guardrail_service:app_input
+      --host 0.0.0.0
+      --port 8001
+      --workers 1"
+    depends_on:
+      - qdrant
+
+  output_guard:
+    build: .
+    restart: always
+    ports:
+      - "8002:8002"
+    environment:
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - USE_IN_MEMORY_QDRANT=false
+      - OUTPUT_SEEDS_PATH=/app/data/output_vector_seeds.json
+    command: >
+      sh -c "sleep 15 &&
+      uvicorn guardrail_service:app_output
+      --host 0.0.0.0
+      --port 8002
+      --workers 1"
+    depends_on:
+      - qdrant
+
+volumes:
+  qdrant_data:
